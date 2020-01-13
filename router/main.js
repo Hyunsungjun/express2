@@ -2,16 +2,17 @@ const crypto = require('crypto'); //비번이 입력되면 암호화하기 위�
 const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session); //2-3줄라인은 세션유지
 const bodyParser = require('body-parser'); //프론트에서 서버로 get이나 post할때 파라미터를 받기위해 사용
-// var mysql = require('mysql'); //5-8 디비 관련
-// var dbConfig = require('./dbconfig');
-// var conn = mysql.createConnection(dbOptions);
-// conn.connect();
+const mysql = require('mysql'); //5-8 디비 관련
+var dbConfig = require('./dbconfig');//디비정보 임포트
+var conn = mysql.createConnection(dbOptions);//
+conn.connect(); //이게 연결하는 코드인가봄 
+
 //10번줄 이후로는 라우팅
 module.exports = function (app) {
   app.use(session({ //11-16까지는 세션 사용하기 위한 초기설정
-    secret: '!@#$%^&*',
-    // store: new MySQLStore(dbOptions),
-    resave: false,
+    secret: '!@#$%^&*', //비밀 설정 정보 관리하는 것 같은데 이거 찾아봐야 할듯 -> 쿠키를 임의로 변조하는 것을 방지하기 위한 값이라함 이값으로 세션을 암호화하여 저장한다고 한다 완전 잘못된 추측하고 있었음 
+    store: new MySQLStore(dbOptions),//이게 뭐지 ->뭔지 알음 여기에 디비정보 넣는거였음 
+    resave: false, //저장관련 설정같네
     saveUninitialized: false
   }));
 
@@ -29,15 +30,15 @@ module.exports = function (app) {
 
   app.get('/login', function (req, res) { //30-35 로그인 프론트 홈에서 사용자가 로그인 버튼을 누르면 세션값에 다라 로그인 다만 더 업데이트 되어야됌
     if (!req.session.name)
-      // res.render('login', { message: 'input your id and password.' });
-      res.render('index.html', {message:'input your id and password.'}); //기존에 'login' 이라고하면 login.ejs를 호출한다는 의미
+      res.render('login', { message: 'input your id and password.' });
+      // res.render('index.html', {message:'input your id and password.'}); //기존에 'login' 이라고하면 login.ejs를 호출한다는 의미
     else
       res.redirect('/welcome');
   });
   app.get('/about', function (req, res) {
     res.render('about.html', { message: 'input your id and password.' });
   });//+2
-  app.get('/services.html', function (req, res) {
+  app.get('/services', function (req, res) {
     res.render('services.html', { message: 'input your id and password.' });
   });//+2 
   app.get('/welcome', function (req, res) {
@@ -70,7 +71,7 @@ module.exports = function (app) {
       pw = derivedKey.toString('hex');
     });
 
-    // var user = results[0];
+    var user = results[0];
     crypto.pbkdf2(password, salt, 100000, 64, 'sha512', function (err, derivedKey) {//로그인엔 68-81만 있으면 된다
       if (err)
         console.log(err);
@@ -86,32 +87,32 @@ module.exports = function (app) {
     });//pbkdf2
   }); // end of app.post
 
-  // app.post('/login', function (req, res) { //83-110 디비에 저장된 비밀번호를 읽어와서 사용자가 입력한 비밀번호화 비교하는 코드
-  // var id = req.body.username;
-  // var pw = req.body.password;
-  // var sql = 'SELECT * FROM user WHERE id=?'; //86번이 디비쪽에 가입된 것을 검색하는데 id로 검색합니다 
-  // conn.query(sql, [id], function (err, results) {
-  // if (err)
-  // console.log(err);
+  app.post('/login', function (req, res) { //83-110 디비에 저장된 비밀번호를 읽어와서 사용자가 입력한 비밀번호화 비교하는 코드
+  var id = req.body.username;
+  var pw = req.body.password;
+  var sql = 'SELECT * FROM user WHERE id=?'; //86번이 디비쪽에 가입된 것을 검색하는데 id로 검색합니다 
+  conn.query(sql, [id], function (err, results) {
+  if (err)
+  console.log(err);
 
-  // if (!results[0]) //id를 조회했을 때 검색 결과가 있다면 회원가입이 된 경우가 아니라면 회원가입이 안되었다고 판단하는 코드 
-  // return res.render('login', { message: 'please check your id.' });
+  if (!results[0]) //id를 조회했을 때 검색 결과가 있다면 회원가입이 된 경우가 아니라면 회원가입이 안되었다고 판단하는 코드 
+  return res.render('login', { message: 'please check your id.' });
 
-  // var user = results[0];
-  // crypto.pbkdf2(pw, user.salt, 100000, 64, 'sha512', function (err, derivedKey) {
-  // if (err)
-  // console.log(err);
-  // if (derivedKey.toString('hex') === user.password) {
-  // req.session.name = user.name;
-  // req.session.save(function () {
-  // return res.redirect('/welcome');
-  // });
-  // }
-  // else {
-  // return res.render('login', { message: 'please check your password.' });
-  // }
-  // });//pbkdf2
-  // });//query
-  // });
+  var user = results[0];
+  crypto.pbkdf2(pw, user.salt, 100000, 64, 'sha512', function (err, derivedKey) {
+  if (err)
+  console.log(err);
+  if (derivedKey.toString('hex') === user.password) {
+  req.session.name = user.name;
+  req.session.save(function () {
+  return res.redirect('/welcome');
+  });
+  }
+  else {
+  return res.render('login', { message: 'please check your password.' });
+  }
+  });//pbkdf2
+  });//query
+  });
 }
 //디비없이 코드를 실행해보기위해 디비부분을 뺏고 회원가입도 없음 
