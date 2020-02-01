@@ -3,14 +3,22 @@ const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session); //2-3줄라인은 세션유지
 const bodyParser = require('body-parser'); //프론트에서 서버로 get이나 post할때 파라미터를 받기위해 사용
 const mysql = require('mysql'); //5-8 디비 관련
-var dbConfig = require('./dbconfig');//디비정보 임포트
+// var dbConfig = require('./dbconfig');//디비정보 임포트
 var conn = mysql.createConnection(dbOptions);//
 conn.connect(); //이게 연결하는 코드인가봄 
+
+var dbConfig = {
+  host: 'localhost',
+  port: 3000,
+  user     : 'root',
+  password : 'qwer1234',
+  database : 'info'
+}
 
 //10번줄 이후로는 라우팅
 module.exports = function (app) {
   app.use(session({ //11-16까지는 세션 사용하기 위한 초기설정
-    secret: '!@#$%^&*', //비밀 설정 정보 관리하는 것 같은데 이거 찾아봐야 할듯 -> 쿠키를 임의로 변조하는 것을 방지하기 위한 값이라함 이값으로 세션을 암호화하여 저장한다고 한다 완전 잘못된 추측하고 있었음 
+    secret: '!@#$%^&*', //비밀 설정 정보 관리하는 것 같은데 이거 찾아봐야 할듯
     store: new MySQLStore(dbOptions),//이게 뭐지 ->뭔지 알음 여기에 디비정보 넣는거였음 
     resave: false, //저장관련 설정같네
     saveUninitialized: false
